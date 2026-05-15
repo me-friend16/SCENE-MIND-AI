@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+vendor/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+*.egg-info/
+
+# Environments / secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+!backend/.env.example
+!ai/.env.example
+
+# Laravel runtime
+backend/storage/logs/*.log
+backend/storage/framework/cache/data/
+backend/storage/framework/sessions/*
+backend/storage/framework/testing/*
+backend/storage/framework/views/*
+backend/bootstrap/cache/*.php
+backend/database/database.sqlite
+backend_old/
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/.vercel/
+
+# Python / AI
+ai/.venv/
+ai/data/vectors/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/settings.json
+
+# Docker volumes
+postgres_data/
+redis_data/
+
+# Misc
+*.log
+*.tmp
+coverage/
+
+# Claude Code local config
+.claude/
