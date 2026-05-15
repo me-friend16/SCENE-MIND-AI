@@ -135,6 +135,63 @@ def rewrite_scene(payload: Dict) -> Dict:
     return generate_scene(payload)
 
 
+_CHARACTER_PROFILE_SYSTEM = """You are a professional story consultant specializing in character development.
+
+Given a character's name and optional description/screenplay context, return a JSON object:
+{
+  "backstory": "<2-3 sentence origin and formative history>",
+  "motivation": "<core want vs. need — what drives them consciously and unconsciously>",
+  "personality": "<3-4 defining traits with specific behavioural manifestations>",
+  "arc": "<how they change from beginning to end — what they must learn>",
+  "voice": "<speech patterns, vocabulary level, verbal tics, how they communicate>"
+}
+
+Return only the JSON object. Be specific, vivid, and grounded in the provided context."""
+
+
+def character_profile(payload: Dict) -> Dict:
+    name: str = payload.get('name', 'CHARACTER')
+    description: str | None = payload.get('description')
+    screenplay_text: str | None = payload.get('screenplay_text')
+
+    context_parts = []
+    if description:
+        context_parts.append(f'DESCRIPTION:\n{description}')
+    if screenplay_text and screenplay_text.strip():
+        context_parts.append(f'SCREENPLAY CONTEXT (excerpts mentioning this character):\n{screenplay_text[:6000]}')
+
+    context_block = '\n\n'.join(context_parts)
+    user_message = f'CHARACTER: {name}\n\n{context_block}\n\nGenerate a rich character profile as JSON.'
+
+    try:
+        client = _get_client()
+        message = client.messages.create(
+            model='claude-sonnet-4-20250514',
+            max_tokens=1024,
+            system=_CHARACTER_PROFILE_SYSTEM,
+            messages=[{'role': 'user', 'content': user_message}],
+        )
+        import json, re
+        raw = message.content[0].text if message.content else '{}'
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
+        profile = json.loads(match.group()) if match else _mock_profile(name)
+    except RuntimeError as e:
+        profile = _mock_profile(name)
+        print(f'[AI] Warning: {e}. Using mock profile.')
+
+    return {'project_id': payload['project_id'], 'profile': profile}
+
+
+def _mock_profile(name: str) -> dict:
+    return {
+        'backstory': f'{name} grew up in difficult circumstances that forged an iron will and a deep distrust of authority.',
+        'motivation': f'Wants recognition and safety; needs to learn that vulnerability is strength, not weakness.',
+        'personality': 'Intensely private, fiercely loyal to the few they trust, darkly humorous under pressure.',
+        'arc': 'Begins closed-off and self-reliant; must open up and accept help to overcome the central crisis.',
+        'voice': 'Clipped sentences, deflects with sarcasm, rarely asks questions — states observations instead.',
+    }
+
+
 def _parse_dialogue(raw: str) -> list[dict]:
     """Parse Claude's raw dialogue text into [{character, line}] pairs."""
     lines = raw.strip().split('\n')

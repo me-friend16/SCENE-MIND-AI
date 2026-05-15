@@ -46,6 +46,12 @@ class AuthController extends Controller
         return response()->json(['token' => $token, 'user' => $user]);
     }
 
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+        return response()->json(['message' => 'Logged out']);
+    }
+
     public function requestPasswordReset(Request $request)
     {
         $request->validate(['email' => 'required|email']);

@@ -73,6 +73,18 @@ class AIController extends Controller
         return $this->proxy('/api/story-analysis', $payload);
     }
 
+    public function characterProfile(Request $request)
+    {
+        $payload = $request->validate([
+            'project_id' => 'required|string',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'screenplay_text' => 'nullable|string',
+        ]);
+
+        return $this->proxy('/api/character-profile', $payload);
+    }
+
     private function proxy(string $path, array $payload)
     {
         $response = Http::timeout(60)->post($this->aiBase . $path, $payload);

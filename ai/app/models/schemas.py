@@ -31,3 +31,10 @@ class StoryAnalysisRequest(BaseModel):
     audience_tone: Optional[str] = 'cinematic'
     evaluate_pacing: bool = True
     evaluate_conflict: bool = True
+
+
+class CharacterProfileRequest(BaseModel):
+    project_id: str
+    name: str
+    description: Optional[str] = None
+    screenplay_text: Optional[str] = None

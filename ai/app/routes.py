@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.models.schemas import (
+    CharacterProfileRequest,
     ContinuityRequest,
     GenerationRequest,
     RewriteRequest,
@@ -7,7 +8,7 @@ from app.models.schemas import (
 )
 from app.services.analysis import analyze_story
 from app.services.continuity import continuity_check
-from app.services.generation import generate_dialogue, generate_scene, rewrite_scene
+from app.services.generation import character_profile, generate_dialogue, generate_scene, rewrite_scene
 
 router = APIRouter()
 
@@ -35,3 +36,8 @@ def continuity_check_endpoint(request: ContinuityRequest):
 @router.post('/story-analysis')
 def story_analysis_endpoint(request: StoryAnalysisRequest):
     return analyze_story(request.model_dump())
+
+
+@router.post('/character-profile')
+def character_profile_endpoint(request: CharacterProfileRequest):
+    return character_profile(request.model_dump())

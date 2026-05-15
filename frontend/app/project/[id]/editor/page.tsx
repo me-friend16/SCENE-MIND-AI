@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import clsx from 'clsx';
@@ -14,6 +14,7 @@ import { useEditorStore } from '@/store/useEditorStore';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useContinuity } from '@/hooks/useContinuity';
 import { useScreenplayFormat } from '@/hooks/useScreenplayFormat';
+import { fetchScreenplay } from '@/lib/api';
 
 type SidebarTab = 'ai' | 'continuity' | 'analytics' | null;
 
@@ -26,6 +27,9 @@ const SIDEBAR_TABS: { id: SidebarTab; label: string; color: string }[] = [
 export default function EditorPage() {
   const { id: projectId } = useParams<{ id: string }>();
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('ai');
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const loadedRef = useRef(false);
 
   const blocks = useEditorStore((s) => s.blocks);
   const focusedBlockId = useEditorStore((s) => s.focusedBlockId);
@@ -35,6 +39,39 @@ export default function EditorPage() {
   const setFocusedBlock = useEditorStore((s) => s.setFocusedBlock);
   const wordCount = useEditorStore((s) => s.wordCount);
   const pageCount = useEditorStore((s) => s.pageCount);
+  const loadBlocks = useEditorStore((s) => s.loadBlocks);
+  const setProjectId = useEditorStore((s) => s.setProjectId);
+  const setScreenplayId = useEditorStore((s) => s.setScreenplayId);
+
+  // Load screenplay from backend on mount
+  useEffect(() => {
+    if (loadedRef.current || !projectId) return;
+    loadedRef.current = true;
+
+    setProjectId(projectId);
+
+    fetchScreenplay(projectId)
+      .then((data) => {
+        const screenplay = data.screenplay;
+        setScreenplayId(String(screenplay.id));
+
+        const savedBlocks = Array.isArray(screenplay.blocks) && screenplay.blocks.length > 0
+          ? screenplay.blocks
+          : null;
+
+        if (savedBlocks) {
+          loadBlocks(savedBlocks);
+        }
+      })
+      .catch((err) => {
+        console.error('[Editor] Failed to load screenplay:', err);
+        setLoadError('Could not load screenplay. Your changes will still auto-save.');
+        // Leave the default blank block in place — user can start writing
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [projectId, setProjectId, setScreenplayId, loadBlocks]);
 
   const { save } = useAutoSave();
   const continuity = useContinuity(projectId);
@@ -80,6 +117,44 @@ export default function EditorPage() {
     setSidebarTab((current) => (current === tab ? null : tab));
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex h-screen flex-col bg-void">
+        {/* Top bar skeleton */}
+        <div className="flex flex-shrink-0 items-center justify-between gap-4 border-b border-white/[0.04] bg-abyss/80 px-4 py-2.5">
+          <div className="flex items-center gap-3">
+            <div className="h-7 w-7 animate-pulse rounded-lg bg-white/[0.06]" />
+            <div className="h-4 w-px bg-white/[0.06]" />
+            <div className="h-4 w-36 animate-pulse rounded bg-white/[0.06]" />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-6 w-20 animate-pulse rounded bg-white/[0.06]" />
+            <div className="h-6 w-16 animate-pulse rounded-xl bg-white/[0.06]" />
+            <div className="h-6 w-12 animate-pulse rounded-xl bg-white/[0.06]" />
+          </div>
+        </div>
+        {/* Toolbar skeleton */}
+        <div className="flex h-9 flex-shrink-0 items-center gap-2 border-b border-white/[0.04] bg-abyss/60 px-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-6 w-20 animate-pulse rounded bg-white/[0.06]" />
+          ))}
+        </div>
+        {/* Editor skeleton */}
+        <div className="flex flex-1 items-start justify-center overflow-y-auto py-16">
+          <div className="w-full max-w-[680px] space-y-3 px-8">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-5 animate-pulse rounded bg-white/[0.04]"
+                style={{ width: `${60 + Math.random() * 35}%` }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-void">
       <CommandPalette projectId={projectId} />
@@ -101,6 +176,9 @@ export default function EditorPage() {
         </div>
 
         <div className="flex items-center gap-3 text-xs">
+          {loadError && (
+            <span className="text-amber/80">{loadError}</span>
+          )}
           <span className="text-slate-700">
             {wordCount().toLocaleString()} words · {pageCount()}p
           </span>

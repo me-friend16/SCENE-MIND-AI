@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { logoutUser } from '@/lib/api';
 
 export interface AuthUser {
   id: number;
@@ -32,6 +33,8 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       logout: () => {
+        // Best-effort backend token revocation; clear local state regardless
+        logoutUser().catch(() => {});
         set({ user: null, token: null, isAuthenticated: false });
         if (typeof document !== 'undefined') {
           document.cookie = 'sm_token=; path=/; max-age=0';

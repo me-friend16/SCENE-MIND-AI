@@ -39,6 +39,9 @@ api.interceptors.response.use(
 export const loginUser = (email: string, password: string) =>
   api.post('/api/login', { email, password }).then((r) => r.data);
 
+export const logoutUser = () =>
+  api.post('/api/logout').then((r) => r.data);
+
 export const registerUser = (
   name: string,
   email: string,
@@ -81,6 +84,16 @@ export const updateCharacter = (
   characterId: number,
   data: Partial<{ name: string; description: string; ai_memory: object }>,
 ) => api.patch(`/api/projects/${projectId}/characters/${characterId}`, data).then((r) => r.data);
+
+export const deleteCharacter = (projectId: string, characterId: number) =>
+  api.delete(`/api/projects/${projectId}/characters/${characterId}`).then((r) => r.data);
+
+export const generateCharacterProfile = (payload: {
+  project_id: string;
+  name: string;
+  description?: string;
+  screenplay_text?: string;
+}) => api.post('/api/ai/character-profile', payload).then((r) => r.data);
 
 // ── AI (proxied through Laravel → FastAPI) ────────────────────────────────────
 export const generateScene = (payload: {

@@ -15,6 +15,7 @@ Route::post('password-update', [AuthController::class, 'resetPassword']);
 
 // ── Protected ─────────────────────────────────────────────────────────────────
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('logout', [AuthController::class, 'logout']);
 
     // Projects
     Route::apiResource('projects', ProjectController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
@@ -36,6 +37,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('rewrite-scene', [AIController::class, 'rewriteScene']);
         Route::post('check-continuity', [AIController::class, 'checkContinuity']);
         Route::post('analyze-story', [AIController::class, 'analyzeStory']);
+        Route::post('character-profile', [AIController::class, 'characterProfile']);
     });
 
     // Legacy continuity check on project
