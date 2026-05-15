@@ -95,6 +95,26 @@ export const generateCharacterProfile = (payload: {
   screenplay_text?: string;
 }) => api.post('/api/ai/character-profile', payload).then((r) => r.data);
 
+// ── Screenplay versions ───────────────────────────────────────────────────────
+export const fetchVersions = (screenplayId: string) =>
+  api.get(`/api/screenplays/${screenplayId}/versions`).then((r) => r.data);
+
+export const fetchVersion = (screenplayId: string, version: number) =>
+  api.get(`/api/screenplays/${screenplayId}/versions/${version}`).then((r) => r.data);
+
+export const restoreVersion = (screenplayId: string, version: number) =>
+  api.post(`/api/screenplays/${screenplayId}/versions/${version}/restore`).then((r) => r.data);
+
+// ── Continuity alerts ─────────────────────────────────────────────────────────
+export const fetchContinuityAlerts = (projectId: string) =>
+  api.get(`/api/projects/${projectId}/continuity-alerts`).then((r) => r.data);
+
+export const storeContinuityAlerts = (projectId: string, issues: unknown[]) =>
+  api.post(`/api/projects/${projectId}/continuity-alerts`, { issues }).then((r) => r.data);
+
+export const resolveContinuityAlert = (projectId: string, alertId: number) =>
+  api.patch(`/api/projects/${projectId}/continuity-alerts/${alertId}/resolve`).then((r) => r.data);
+
 // ── AI (proxied through Laravel → FastAPI) ────────────────────────────────────
 export const generateScene = (payload: {
   project_id: string;

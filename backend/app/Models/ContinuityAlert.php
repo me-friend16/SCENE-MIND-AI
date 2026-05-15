@@ -5,26 +5,24 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Screenplay extends Model
+class ContinuityAlert extends Model
 {
     protected $fillable = [
         'project_id',
-        'title',
-        'blocks',
-        'version',
+        'type',
+        'severity',
+        'description',
+        'suggestion',
+        'scene_ref',
+        'resolved',
     ];
 
     protected $casts = [
-        'blocks' => 'array',
+        'resolved' => 'boolean',
     ];
 
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
-    }
-
-    public function versions(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(ScreenplayVersion::class)->orderByDesc('version');
     }
 }

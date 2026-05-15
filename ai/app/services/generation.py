@@ -2,6 +2,7 @@ import os
 from typing import Dict
 
 import anthropic
+from app.memory.vector_store import build_context, store_scene
 
 _client: anthropic.Anthropic | None = None
 
@@ -58,6 +59,11 @@ def generate_scene(payload: Dict) -> Dict:
     if scene_text and scene_text.strip():
         context_block = f'\n\nCURRENT SCREENPLAY CONTEXT:\n"""\n{scene_text.strip()}\n"""'
 
+    # Inject relevant memories from RAG store
+    project_id: str = payload.get('project_id', '')
+    memory_context = build_context(project_id, prompt + ' ' + (scene_text or ''))
+    memory_block = f'\n\nESTABLISHED STORY FACTS (do not contradict):\n{memory_context}' if memory_context else ''
+
     action_map = {
         'continue': 'Continue the screenplay from where it ends. Maintain the established tone and momentum.',
         'rewrite': 'Rewrite the screenplay section with more cinematic power and clarity.',
@@ -65,7 +71,7 @@ def generate_scene(payload: Dict) -> Dict:
     }
     action = action_map.get(mode, action_map['generate'])
 
-    user_message = f'{action}\n\nINSTRUCTIONS:\n{prompt}{context_block}'
+    user_message = f'{action}\n\nINSTRUCTIONS:\n{prompt}{context_block}{memory_block}'
 
     try:
         client = _get_client()
@@ -80,6 +86,14 @@ def generate_scene(payload: Dict) -> Dict:
         # Fallback for missing API key (dev mode)
         content = _mock_scene(prompt, genre)
         print(f'[AI] Warning: {e}. Using mock output.')
+
+    # Store generated scene in memory for future retrieval
+    if content and project_id:
+        try:
+            first_line = content.split('\n')[0].strip()
+            store_scene(project_id, first_line or 'SCENE', content[:1000])
+        except Exception:
+            pass
 
     return {
         'project_id': payload['project_id'],

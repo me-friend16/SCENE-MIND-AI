@@ -1,11 +1,12 @@
-import { useState, useCallback } from 'react';
-import { checkContinuity } from '@/lib/api';
+import { useState, useCallback, useEffect } from 'react';
+import { checkContinuity, storeContinuityAlerts, fetchContinuityAlerts, resolveContinuityAlert } from '@/lib/api';
 import { ScreenplayBlock } from '@/store/useEditorStore';
 
 export type AlertSeverity = 'critical' | 'high' | 'medium' | 'low';
 
 export interface ContinuityAlert {
   id: string;
+  dbId?: number;
   type: string;
   severity: AlertSeverity;
   description: string;
@@ -22,10 +23,41 @@ type RawIssue = {
   scene_ref?: string;
 };
 
+type DbAlert = {
+  id: number;
+  type: string;
+  severity: AlertSeverity;
+  description: string;
+  suggestion: string | null;
+  scene_ref: string | null;
+};
+
 export function useContinuity(projectId: string) {
   const [alerts, setAlerts] = useState<ContinuityAlert[]>([]);
   const [isChecking, setIsChecking] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+
+  // Load persisted alerts from DB on mount
+  useEffect(() => {
+    if (!projectId) return;
+    fetchContinuityAlerts(projectId)
+      .then((data) => {
+        const dbAlerts: ContinuityAlert[] = (data.alerts ?? []).map((a: DbAlert) => ({
+          id: `db-${a.id}`,
+          dbId: a.id,
+          type: a.type,
+          severity: a.severity,
+          description: a.description,
+          suggestion: a.suggestion ?? '',
+          sceneRef: a.scene_ref ?? undefined,
+          dismissed: false,
+        }));
+        setAlerts(dbAlerts);
+      })
+      .catch(() => {
+        // Non-fatal — continue without persisted alerts
+      });
+  }, [projectId]);
 
   const runCheck = useCallback(
     async (blocks: ScreenplayBlock[], characters: string[]) => {
@@ -38,8 +70,25 @@ export function useContinuity(projectId: string) {
           characters,
         });
 
-        const newAlerts: ContinuityAlert[] = (result.issues ?? []).map(
-          (issue: RawIssue, i: number) => ({
+        const issues: RawIssue[] = result.issues ?? [];
+
+        // Persist to DB
+        let dbAlerts: ContinuityAlert[] = [];
+        try {
+          const stored = await storeContinuityAlerts(projectId, issues);
+          dbAlerts = (stored.alerts ?? []).map((a: DbAlert) => ({
+            id: `db-${a.id}`,
+            dbId: a.id,
+            type: a.type,
+            severity: a.severity,
+            description: a.description,
+            suggestion: a.suggestion ?? '',
+            sceneRef: a.scene_ref ?? undefined,
+            dismissed: false,
+          }));
+        } catch {
+          // Fall back to in-memory alerts if DB unavailable
+          dbAlerts = issues.map((issue, i) => ({
             id: `alert-${Date.now()}-${i}`,
             type: issue.type ?? 'general',
             severity: (issue.severity ?? 'medium') as AlertSeverity,
@@ -47,10 +96,10 @@ export function useContinuity(projectId: string) {
             suggestion: issue.suggestion ?? '',
             sceneRef: issue.scene_ref,
             dismissed: false,
-          }),
-        );
+          }));
+        }
 
-        setAlerts(newAlerts);
+        setAlerts(dbAlerts);
         setLastChecked(new Date());
       } catch {
         // Keep existing alerts on error
@@ -61,9 +110,16 @@ export function useContinuity(projectId: string) {
     [projectId],
   );
 
-  const resolveAlert = useCallback((id: string) => {
-    setAlerts((prev) => prev.filter((a) => a.id !== id));
-  }, []);
+  const resolveAlert = useCallback(
+    (id: string) => {
+      const alert = alerts.find((a) => a.id === id);
+      if (alert?.dbId) {
+        resolveContinuityAlert(projectId, alert.dbId).catch(() => {});
+      }
+      setAlerts((prev) => prev.filter((a) => a.id !== id));
+    },
+    [alerts, projectId],
+  );
 
   const dismissAlert = useCallback((id: string) => {
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, dismissed: true } : a)));

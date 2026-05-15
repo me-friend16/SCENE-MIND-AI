@@ -39,9 +39,22 @@ class ScreenplayController extends Controller
             'blocks.*.position' => 'required|integer|min:0',
         ]);
 
+        $nextVersion = $screenplay->version + 1;
+
+        // Snapshot current state before overwriting (keep last 50 versions)
+        if (!empty($screenplay->blocks)) {
+            $screenplay->versions()->create([
+                'version' => $screenplay->version,
+                'blocks' => $screenplay->blocks,
+                'label' => null,
+            ]);
+            $screenplay->versions()->skip(50)->orderByDesc('version')->cursor()
+                ->each(fn($v) => $v->delete());
+        }
+
         $screenplay->update([
             'blocks' => $data['blocks'],
-            'version' => $screenplay->version + 1,
+            'version' => $nextVersion,
         ]);
 
         return response()->json(['screenplay' => $screenplay]);

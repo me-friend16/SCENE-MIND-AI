@@ -38,4 +38,9 @@ class Project extends Model
     {
         return $this->hasMany(Character::class);
     }
+
+    public function continuityAlerts(): HasMany
+    {
+        return $this->hasMany(ContinuityAlert::class);
+    }
 }

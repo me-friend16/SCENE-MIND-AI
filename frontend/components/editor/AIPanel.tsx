@@ -181,8 +181,11 @@ export default function AIPanel({ projectId, currentSceneText, onInsert }: Props
             </p>
             <p className="whitespace-pre-wrap text-[11px] leading-relaxed text-slate-300">
               {msg.content}
+              {msg.streaming && (
+                <span className="ml-0.5 inline-block h-3 w-0.5 animate-pulse bg-accent align-middle" />
+              )}
             </p>
-            {msg.role === 'assistant' && (
+            {msg.role === 'assistant' && !msg.streaming && msg.content && (
               <button
                 onClick={() => onInsert(msg.content)}
                 className="mt-2 rounded-lg bg-accent/15 px-2.5 py-1 text-[10px] font-semibold text-accent transition-colors hover:bg-accent/25"

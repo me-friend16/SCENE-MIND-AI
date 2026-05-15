@@ -3,8 +3,10 @@
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CharacterController;
+use App\Http\Controllers\ContinuityAlertController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ScreenplayController;
+use App\Http\Controllers\ScreenplayVersionController;
 use Illuminate\Support\Facades\Route;
 
 // ── Auth (public) ─────────────────────────────────────────────────────────────
@@ -23,6 +25,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Screenplay (one per project, lazily created)
     Route::get('projects/{project}/screenplay', [ScreenplayController::class, 'show']);
     Route::patch('screenplays/{screenplay}', [ScreenplayController::class, 'update']);
+
+    // Screenplay versions
+    Route::get('screenplays/{screenplay}/versions', [ScreenplayVersionController::class, 'index']);
+    Route::get('screenplays/{screenplay}/versions/{version}', [ScreenplayVersionController::class, 'show']);
+    Route::post('screenplays/{screenplay}/versions/{version}/restore', [ScreenplayVersionController::class, 'restore']);
+
+    // Continuity alerts
+    Route::get('projects/{project}/continuity-alerts', [ContinuityAlertController::class, 'index']);
+    Route::post('projects/{project}/continuity-alerts', [ContinuityAlertController::class, 'store']);
+    Route::patch('projects/{project}/continuity-alerts/{alert}/resolve', [ContinuityAlertController::class, 'resolve']);
 
     // Characters
     Route::get('projects/{project}/characters', [CharacterController::class, 'index']);
